@@ -47,8 +47,11 @@ def doTask(payload, task)
 		}
 		http.errback {
 			puts "list errback: #{http.error}: #{payload}"
-			sleep 10
-			doTask payload, 'list'
+			work
+			EM.add_timer(10) {
+				doTask payload, 'list'
+				done
+			}
 			done
 		}
 	when 'video'
@@ -58,23 +61,35 @@ def doTask(payload, task)
 			tree = Nokogiri::HTML http.response
 			talkID = getTalkIDFromTalk tree
 			audioLink = getMp3LinkFromTalk tree
+			videoLink = getMp4LinkFromTalk tree
 			subtitleLink = getSubtitleLinkFromID talkID
 
-			talk = {:url => payload, :talkid => talkID, :audio => audioLink, :subtitle => subtitleLink}
+			talk = {:url => payload, :talkid => talkID, :audio => audioLink, :subtitle => subtitleLink, :video => videoLink}
 			doTask talk, 'log'
 
+			audioPayload = {:url => talk[:audio], :extension => 'mp3', :talkid => talk[:talkid], :retry => 0}
+			subtitlePayload = {:url => BASEURL + talk[:subtitle], :extension => 'json', :talkid => talk[:talkid], :retry => 0}
+			videoPayload = {:url => talk[:video], :extension => 'mp4', :talkid => talk[:talkid], :retry => 0}
+=begin
 			if talk[:talkid] and talk[:audio] and talk[:subtitle]
-				audioPayload = {:url => talk[:audio], :extension => 'mp3', :talkid => talk[:talkid], :retry => 0}
-				subtitlePayload = {:url => BASEURL + talk[:subtitle], :extension => 'json', :talkid => talk[:talkid], :retry => 0}
 				doTask audioPayload, 'download'
 				doTask subtitlePayload, 'download'
+			end
+=end
+			if talk[:talkid] and talk[:audio] == nil and talk[:subtitle] and talk[:video]
+				doTask subtitlePayload, 'download'
+				doTask videoPayload, 'download'
 			end
 
 			done
 		}
 		http.errback {
 			puts "video errback: #{http.error}: #{payload}"
-			doTask payload, 'video'
+			work
+			EM.add_timer(10) {
+				doTask payload, 'video'
+				done
+			}
 			done
 		}
 	when 'download'
@@ -98,8 +113,11 @@ def doTask(payload, task)
 				puts "download errback: #{http.error}: #{payload}"
 				if payload[:retry] < MAX_RETRY
 					payload[:retry] += 1
-					sleep payload[:retry]
-					doTask payload, 'download'
+					work
+					EM.add_timer(payload[:retry]) {
+						doTask payload, 'download'
+						done
+					}
 				end
 				done
 			}

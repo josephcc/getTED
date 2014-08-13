@@ -67,6 +67,23 @@ def getMp3LinkFromTalk(tree)
 	mp3Link
 end
 
+#"file":"http://download.ted.com/talks/SirKenRobinson_2006-320k.mp4?apikey=489b859150fc58263f17110eeb44ed5fba4a3b22"
+def getMp4LinkFromTalk(tree)
+	if tree.class != Nokogiri::HTML::Document
+		tree = Nokogiri::HTML tree
+	end
+	scripts = tree.xpath "//script"
+	scripts = scripts.map{|script| script.text.strip}
+	scripts = scripts.select{|script| /['"]file['"]\s*:\s*['"]http:\/\/download.ted.com\/talks\/[^'"]+\.mp4[^"']+['"]/.match script} 
+#	throw "more than one talk audio on talk page: #{scripts}" unless scripts.size <= 1
+	if scripts.size == 0
+		return nil
+	end
+	script = scripts[0]
+	mp4Link = /['"]file['"]\s*:\s*['"](http:\/\/download.ted.com\/talks\/[^'"]+\.mp4[^"']+)['"]/.match(script)[1]
+	mp4Link
+end
+
 if __FILE__ == $0
 
 	BASEURL = "www.ted.com"
@@ -80,21 +97,27 @@ if __FILE__ == $0
 	puts nextPage
 	puts
 
+=begin
 	html = Net::HTTP.get BASEURL, nextPage
 	videos = getVideosFromList html
 	nextPage = getNextPageFromList html
 
 	puts videos
 	puts nextPage
+=end
 
-	html = Net::HTTP.get BASEURL, videos[0]
-	talkID = getTalkIDFromTalk html
-	mp3Link = getMp3LinkFromTalk html
-	subLink = getSubtitleLinkFromID talkID
+	videos.each do |video|
+		html = Net::HTTP.get BASEURL, video
+		talkID = getTalkIDFromTalk html
+		mp3Link = getMp3LinkFromTalk html
+		mp4Link = getMp4LinkFromTalk html
+		subLink = getSubtitleLinkFromID talkID
 
-	puts
-	puts talkID
-	puts mp3Link
-	puts subLink
+		puts
+		puts talkID
+		puts mp3Link
+		puts mp4Link
+		puts subLink
+	end
 
 end

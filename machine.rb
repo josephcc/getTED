@@ -32,7 +32,6 @@ def doTask(payload, task)
 	case task
 	when 'list'
 		work
-		sleep 5
 		doTask({:url => payload}, 'log')
 		http = EM::HttpRequest.new(BASEURL + payload).get :redirects => 10
 		http.callback {
@@ -54,7 +53,6 @@ def doTask(payload, task)
 		}
 	when 'video'
 		work
-		sleep 3
 		http = EM::HttpRequest.new(BASEURL + payload).get :redirects => 10
 		http.callback {
 			tree = Nokogiri::HTML http.response
@@ -76,13 +74,11 @@ def doTask(payload, task)
 		}
 		http.errback {
 			puts "video errback: #{http.error}: #{payload}"
-			sleep 10
 			doTask payload, 'video'
 			done
 		}
 	when 'download'
 		work
-		sleep 1
 		path = File.join DLPATH, "#{payload[:talkid]}.#{payload[:extension]}"
 		if File.exists? path
 			done
@@ -102,7 +98,7 @@ def doTask(payload, task)
 				puts "download errback: #{http.error}: #{payload}"
 				if payload[:retry] < MAX_RETRY
 					payload[:retry] += 1
-					sleep payload[:retry] * 2
+					sleep payload[:retry]
 					doTask payload, 'download'
 				end
 				done

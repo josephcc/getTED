@@ -18,7 +18,10 @@ def getNextPageFromList(tree)
 		tree = Nokogiri::HTML tree
 	end
 	links = tree.xpath("//a[@rel='next' and text()='Next']")
-	throw "more than one next link on list page" unless links.size == 1
+#	throw "more than one next link on list page" unless links.size == 1
+	if links.size == 0
+		return nil
+	end
 	links[0].attr 'href'
 end
 
@@ -34,7 +37,10 @@ def getTalkIDFromTalk(tree)
 	scripts = tree.xpath "//script"
 	scripts = scripts.map{|script| script.text.strip}
 	scripts = scripts.select{|script| /^__ga\(['"]set['"],\s*['"]dimension2['"],\s*\d+\);$/.match script}
-	throw "more than one talk ID on talk page: #{scripts}" unless scripts.size == 1
+#	throw "more than one talk ID on talk page: #{scripts}" unless scripts.size == 1
+	if scripts.size == 0
+		return nil
+	end
 	script = scripts[0]
 	talkID = /^__ga\(['"]set['"],\s*['"]dimension2['"],\s*(\d+)\);$/.match(script)[1]
 	talkID.to_i
@@ -52,7 +58,7 @@ def getMp3LinkFromTalk(tree)
 	scripts = tree.xpath "//script"
 	scripts = scripts.map{|script| script.text.strip}
 	scripts = scripts.select{|script| /['"]audioDownload['"]\s*:\s*['"]http:\/\/download.ted.com\/talks\/[^'"]+['"]/.match script} 
-	throw "more than one talk audio on talk page: #{scripts}" unless scripts.size <= 1
+#	throw "more than one talk audio on talk page: #{scripts}" unless scripts.size <= 1
 	if scripts.size == 0
 		return nil
 	end
